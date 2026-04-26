@@ -1,7 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { uploadExcel, getUploadStatus } from '../services/api';
-import { Upload, FileSpreadsheet, CheckCircle, XCircle, Loader2, RefreshCw, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { uploadExcel, getUploadStatus, getAvailableSeasons } from '../services/api';
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Loader2, RefreshCw, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const SessionSelector = ({ availableSeasons, currentSession, onSessionChange, compact = false }) => {
+    const selectedSeasonData = availableSeasons.find(s => s.season === currentSession.season) || (availableSeasons.length > 0 ? availableSeasons[0] : null);
+    const availableLevels = selectedSeasonData ? selectedSeasonData.levels : [];
+
+    return (
+        <div className={`flex flex-wrap items-center gap-4 ${compact ? '' : 'mb-8'}`}>
+            {!compact && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-sm">
+                    <Layers size={14} className="text-accent" />
+                    <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest font-bold">Sync Protocol:</span>
+                </div>
+            )}
+            <div className="flex items-center gap-3">
+                <div className="relative group">
+                    <select
+                        value={currentSession.season}
+                        onChange={(e) => {
+                            const newSeason = e.target.value;
+                            const newSeasonData = availableSeasons.find(s => s.season === newSeason);
+                            const firstLevel = newSeasonData?.levels[0] || 'level1';
+                            onSessionChange({ season: newSeason, level: firstLevel });
+                        }}
+                        className="appearance-none bg-black/40 border border-white/10 text-white font-mono text-[11px] px-4 py-2 pr-8 rounded-sm hover:border-accent transition-all focus:outline-none focus:ring-1 focus:ring-accent/50 cursor-pointer"
+                    >
+                        {availableSeasons.map(s => (
+                            <option key={s.season} value={s.season}>{s.season.toUpperCase()}</option>
+                        ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/20 group-hover:text-accent transition-colors">
+                        <ChevronRight size={10} className="rotate-90" />
+                    </div>
+                </div>
+
+                <div className="relative group">
+                    <select
+                        value={currentSession.level}
+                        onChange={(e) => onSessionChange({ ...currentSession, level: e.target.value })}
+                        className="appearance-none bg-black/40 border border-white/10 text-white font-mono text-[11px] px-4 py-2 pr-8 rounded-sm hover:border-accent transition-all focus:outline-none focus:ring-1 focus:ring-accent/50 cursor-pointer"
+                    >
+                        {availableLevels.map(l => (
+                            <option key={l} value={l}>{l.toUpperCase()}</option>
+                        ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/20 group-hover:text-accent transition-colors">
+                        <ChevronRight size={10} className="rotate-90" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const DatePicker = ({ selectedDate, onChange }) => {
     const [viewDate, setViewDate] = useState(new Date(selectedDate));
@@ -153,15 +206,38 @@ const AdminUpload = () => {
     const [alreadyUploaded, setAlreadyUploaded] = useState(false);
     const [forceUpload, setForceUpload] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [availableSeasons, setAvailableSeasons] = useState([]);
+    const [currentSession, setCurrentSession] = useState({
+        season: import.meta.env.VITE_CURRENT_SEASON,
+        level: import.meta.env.VITE_CURRENT_LEVEL
+    });
+
+    useEffect(() => {
+        const fetchSessions = async () => {
+            try {
+                const res = await getAvailableSeasons();
+                let seasons = res.data;
+                const envSeason = import.meta.env.VITE_CURRENT_SEASON;
+                const envLevel = import.meta.env.VITE_CURRENT_LEVEL;
+                let fs = seasons.find(s => s.season === envSeason);
+                if (!fs) seasons = [{ season: envSeason, levels: [envLevel] }, ...seasons];
+                else if (!fs.levels.includes(envLevel)) fs.levels = [...fs.levels, envLevel];
+                setAvailableSeasons(seasons);
+            } catch (err) {
+                console.error("Failed to fetch sessions:", err);
+            }
+        };
+        fetchSessions();
+    }, []);
 
     useEffect(() => {
         checkStatus();
-    }, [selectedDate]);
+    }, [selectedDate, currentSession]);
 
     const checkStatus = async () => {
         try {
             setAlreadyUploaded(false); // Reset while checking
-            const response = await getUploadStatus(selectedDate);
+            const response = await getUploadStatus(selectedDate, currentSession);
             if (response.data.uploaded) {
                 setAlreadyUploaded(true);
             }
@@ -185,11 +261,11 @@ const AdminUpload = () => {
         formData.append('file', file);
 
         try {
-            const response = await uploadExcel(formData, selectedDate);
+            const response = await uploadExcel(formData, selectedDate, currentSession);
             setStatus('success');
             setAlreadyUploaded(true);
             setForceUpload(false);
-            setMessage(`Successfully processed ${response.data.total_processed} entries for ${selectedDate}. Updated ${response.data.updated_count} users.`);
+            setMessage(`Successfully processed ${response.data.total_processed} entries. Updated ${response.data.updated_count} users.`);
             setFile(null);
         } catch (error) {
             console.error('Upload failed:', error);
@@ -203,11 +279,29 @@ const AdminUpload = () => {
     return (
         <div className="pt-24 pb-12 px-6 max-w-4xl mx-auto">
             <div className="mb-12">
-                <h1 className="text-4xl font-display font-bold tracking-tighter mb-4 flex items-center gap-4 text-white">
-                    <Upload className="text-accent" size={36} /> ADMIN_PORTAL
-                </h1>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                    <h1 className="text-4xl font-display font-bold tracking-tighter flex items-center gap-4 text-white">
+                        <Upload className="text-accent" size={36} /> ADMIN_PORTAL
+                    </h1>
+                    
+                    <div className="flex items-center gap-3">
+                        <Link 
+                            to="/admin/curriculum" 
+                            className="hidden md:flex items-center gap-2 px-6 py-2 bg-white/5 border border-white/10 text-white/60 font-mono text-[10px] font-black uppercase tracking-widest hover:border-accent/40 hover:text-accent transition-all rounded-sm"
+                        >
+                            Curriculum_Manager
+                        </Link>
+                        <SessionSelector 
+                            availableSeasons={availableSeasons}
+                            currentSession={currentSession}
+                            onSessionChange={setCurrentSession}
+                            compact
+                        />
+                    </div>
+                </div>
+                
                 <p className="text-white/60 font-mono tracking-tight max-w-2xl">
-                    Upload daily score sheets to update participant rankings. The system will automatically detect <strong>Roll Numbers</strong> from email prefixes and normalize names to <strong>UPPERCASE</strong>.
+                    Upload daily score sheets to update participant rankings for the current active period. The system will automatically detect <strong>Roll Numbers</strong> from email prefixes and normalize names to <strong>UPPERCASE</strong>.
                 </p>
             </div>
 

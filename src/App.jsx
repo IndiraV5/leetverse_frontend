@@ -7,10 +7,16 @@ import Particles from './components/Particles';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
 import AdminUpload from './pages/AdminUpload';
+import AdminCurriculum from './pages/AdminCurriculum';
 import Unauthorized from './pages/Unauthorized';
 import Members from './pages/Members';
 import Notes from './pages/Notes';
+import Practice from './pages/Practice';
 import ParallaxBackground from './components/ParallaxBackground';
+import ReminderBanner from './components/ReminderBanner';
+import ValidationModal from './components/ValidationModal';
+import { ReminderProvider, useReminders } from './context/ReminderContext';
+import { verifyAndComplete } from './services/api';
 import { LogIn, LogOut, User as UserIcon, Shield, X } from 'lucide-react';
 
 import { checkHealth } from './services/api';
@@ -44,8 +50,8 @@ const SystemStatus = () => {
     <div
       onClick={performCheck}
       className={`flex items-center gap-3 px-3 py-1.5 border rounded-sm transition-all duration-500 cursor-pointer ${isHealthy === false
-          ? 'border-orange-500/30 bg-orange-500/5 text-orange-400'
-          : 'border-white/10 text-white/40'
+        ? 'border-orange-500/30 bg-orange-500/5 text-orange-400'
+        : 'border-white/10 text-white/40'
         }`}>
       <div className={`w-1.5 h-1.5 rounded-full ${isHealthy === false ? 'bg-orange-500 animate-pulse shadow-[0_0_8px_#f97316]' : 'bg-white/20'}`} />
       <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold">
@@ -63,6 +69,7 @@ const Navigation = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Members', path: '/members' },
+    { name: 'Practice', path: '/practice' },
     { name: 'Notes', path: '/notes' },
     { name: 'Leaderboard', path: '/#leaderboard' },
   ];
@@ -104,6 +111,17 @@ const Navigation = () => {
           </Link>
 
           <SystemStatus />
+
+          <div className="lg:flex hidden items-center gap-3">
+            <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-sm">
+              {/* <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest">S: </span> */}
+              <span className="text-[9px] font-mono text-accent font-bold uppercase tracking-widest">{import.meta.env.VITE_CURRENT_SEASON || 'N/A'}</span>
+            </div>
+            <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-sm">
+              {/* <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest">L: </span> */}
+              <span className="text-[9px] font-mono text-accent font-bold uppercase tracking-widest">{import.meta.env.VITE_CURRENT_LEVEL || 'N/A'}</span>
+            </div>
+          </div>
         </div>
 
         {/* Desktop Navigation */}
@@ -226,10 +244,21 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    console.log("%c LeetVerse %c Ready ",
-      "color: #050505; background: #00ff9d; font-weight: bold;",
-      "color: #00ff9d; background: #111111;");
+    console.log("%c LEETVERSE v1.0 %c INITIATED ", "color: #050505; background: #00ff9d; font-weight: bold;", "color: #00ff9d; background: #111111;");
   }, []);
+
+  const { showValidation, selectedQuestion, closeValidation, refreshReminders } = useReminders();
+  const { user } = useAuth();
+
+  const handleGlobalVerify = async (responses) => {
+    const data = {
+        rollNo: user.rollNo,
+        ...responses
+    };
+    const res = await verifyAndComplete(data);
+    await refreshReminders();
+    return res;
+  };
 
   useEffect(() => {
     if (isUnauthorized) {
@@ -271,12 +300,24 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/profile" element={<Dashboard />} />
+          <Route path="/practice" element={<Practice />} />
           <Route path="/admin" element={<AdminUpload />} />
+          <Route path="/admin/curriculum" element={<AdminCurriculum />} />
           <Route path="/members" element={<Members />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
         </Routes>
       </main>
+
+      <ReminderBanner />
+      
+      {showValidation && (
+        <ValidationModal 
+            question={selectedQuestion} 
+            onClose={closeValidation} 
+            onVerify={handleGlobalVerify}
+        />
+      )}
     </div>
   );
 }
@@ -285,7 +326,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <ReminderProvider>
+          <AppContent />
+        </ReminderProvider>
       </AuthProvider>
     </Router>
   );

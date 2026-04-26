@@ -19,41 +19,53 @@ api.interceptors.request.use(async (config) => {
 
 export const loginUser = () => api.post('/login');
 export const getMyProfile = () => api.get('/me');
-export const getUserProfile = () => api.get('/profile');
-export const getTop10Leaderboard = (rollNo) => api.get('/leaderboard/top10', { params: { rollNo } });
-export const getFullLeaderboard = () => api.get('/leaderboard/full');
+export const getUserProfile = (params = {}) => api.get('/profile', { params });
+
+// export const checkLeetcodeUsername = (params = {}) => api.get('/profile/check-leetcode', { params });
+export const getAvailableSeasons = () => api.get('/seasons');
+export const getOverallLeaderboard = (params = {}) => api.get('/leaderboard/top10', { params });
+export const getTop10Leaderboard = (rollNo, params = {}) => api.get('/leaderboard/top10', {
+    params: { rollNo, ...params }
+});
+export const getDirectTop10 = (key = 'latest_top10_url') => api.get(`/leaderboard/cached/${key}`);
+export const getCachedTop10 = () => api.get('/leaderboard/cached/top10');
+export const getPreviousWinners = () => api.get('/leaderboard/previous');
 export const getDailyLeaderboard = (date) => api.get(`/leaderboard/${date}`);
-export const getUserHistory = (rollNo) => api.get(`/user/${rollNo}/history`);
-export const uploadExcel = (formData, date) => api.post('/upload-excel', formData, {
-    params: { score_date: date },
+export const getUserHistory = (rollNo, params = {}) => api.get(`/user/${rollNo}/history`, { params });
+export const getUserRank = (rollNo, params = {}) => api.get(`/user/${rollNo}/rank`, { params });
+export const uploadExcel = (formData, date, params = {}) => api.post('/upload-excel', formData, {
+    params: { score_date: date, ...params },
     headers: {
         'Content-Type': 'multipart/form-data',
     },
 });
-export const getUploadStatus = (date) => api.get('/upload-status', { params: { score_date: date } });
+export const getUploadStatus = (date, params = {}) => api.get('/upload-status', {
+    params: { score_date: date, ...params }
+});
 
-export const getDirectTop10 = async () => {
-    const fetchUrl = import.meta.env.VITE_LEADERBOARD_TOP10_URL;
-    if (!fetchUrl) {
-        console.warn('VITE_LEADERBOARD_TOP10_URL not set');
-        return null;
-    }
-    try {
-        const response = await fetch(fetchUrl);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        return data?.value || (Array.isArray(data) ? data : null);
-    } catch (error) {
-        console.error('Direct edge fetch failed:', error);
-        return null;
-    }
-};
+// Curriculum & Homework
+export const addCurriculum = (data) => api.post('/curriculum', data);
+export const getCurriculum = (params = {}) => api.get('/curriculum', { params });
+export const deleteCurriculum = (date) => api.delete(`/curriculum/${date}`);
+
+// Questions & Reminders
+export const logExtraPractice = (rollNo, date, slug) => api.post('/question/extra', null, {
+    params: { roll_no: rollNo, date_str: date, slug }
+});
+export const getExtraPractice = (rollNo) => api.get(`/question/extra/${rollNo}`);
+export const verifyAndComplete = (data) => api.post('/question/complete', data);
+export const getReminders = (rollNo, date) => api.get('/reminders', {
+    params: { roll_no: rollNo, date_str: date }
+});
+
+export const updateProfile = (data, params = {}) => api.patch('/profile', data, { params });
+export const checkLeetcodeUsername = (params = {}) => api.get('/profile/check-leetcode', { params });
 
 export const checkHealth = async () => {
     try {
         const response = await api.get('/');
         return response.status === 200;
-    } catch (error) {
+    } catch {
         return false;
     }
 };

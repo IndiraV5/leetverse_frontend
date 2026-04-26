@@ -22,9 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
+backend
 .env
-.env.example
+leetverse-a7324-firebase-adminsdk-fbsvc-5eedee1ba1.json
 leetversetest-firebase-adminsdk-fbsvc-7545cf3a68.json
 package-lock.json
-leetverse-a7324-firebase-adminsdk-fbsvc-5eedee1ba1.json

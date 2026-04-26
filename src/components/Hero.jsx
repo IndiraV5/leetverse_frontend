@@ -144,6 +144,12 @@ const Hero = () => {
                         <span className="text-accent text-xs font-mono tracking-widest uppercase">E Labs Presents</span>
                     </motion.div>
 
+                    <motion.div variants={itemVariants} className="flex items-center justify-center gap-4 mb-4 text-[10px] md:text-xs font-mono font-bold tracking-[0.4em] text-accent/60 uppercase">
+                        <span>{import.meta.env.VITE_CURRENT_SEASON || 'N/A'}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent/30" />
+                        <span>{import.meta.env.VITE_CURRENT_LEVEL || 'N/A'}</span>
+                    </motion.div>
+
                     <motion.h1
                         variants={itemVariants}
                         className="text-6xl md:text-9xl font-bold mb-6 tracking-tighter"
