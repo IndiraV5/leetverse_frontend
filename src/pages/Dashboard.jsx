@@ -478,9 +478,12 @@ const Dashboard = () => {
                     <p className="text-white/40 font-mono text-sm tracking-tight max-w-2xl">
                         Remote diagnostics interface for session: <span className="text-accent font-bold uppercase">{currentSession.season}_{currentSession.level}</span>.
                     </p>
-                    <div className="mt-6 flex items-center gap-4">
+                    <div className="mt-6 flex flex-wrap items-center gap-4">
                         <Link to="/admin/curriculum" className="flex items-center gap-2 px-6 py-2 bg-accent/10 border border-accent/20 text-accent font-mono text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-background transition-all">
                             <Calendar size={14} /> MANAGE_CURRICULUM
+                        </Link>
+                        <Link to="/admin/progress" className="flex items-center gap-2 px-6 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-mono text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-background transition-all">
+                            <Activity size={14} /> PRACTICE_PROGRESS
                         </Link>
                         <Link to="/admin" className="flex items-center gap-2 px-6 py-2 bg-white/5 border border-white/10 text-white/60 font-mono text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all">
                             <Plus size={14} /> UPLOAD_SCORES

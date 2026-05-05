@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
 import AdminUpload from './pages/AdminUpload';
 import AdminCurriculum from './pages/AdminCurriculum';
+import AdminProgress from './pages/AdminProgress';
 import Unauthorized from './pages/Unauthorized';
 import Members from './pages/Members';
 import Notes from './pages/Notes';
@@ -303,6 +304,7 @@ function AppContent() {
           <Route path="/practice" element={<Practice />} />
           <Route path="/admin" element={<AdminUpload />} />
           <Route path="/admin/curriculum" element={<AdminCurriculum />} />
+          <Route path="/admin/progress" element={<AdminProgress />} />
           <Route path="/members" element={<Members />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/unauthorized" element={<Unauthorized />} />

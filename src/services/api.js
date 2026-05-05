@@ -43,6 +43,9 @@ export const getUploadStatus = (date, params = {}) => api.get('/upload-status', 
     params: { score_date: date, ...params }
 });
 
+export const getAdminPracticeProgress = (params = {}) => api.get('/admin/practice-progress', { params });
+
+
 // Curriculum & Homework
 export const addCurriculum = (data) => api.post('/curriculum', data);
 export const getCurriculum = (params = {}) => api.get('/curriculum', { params });
