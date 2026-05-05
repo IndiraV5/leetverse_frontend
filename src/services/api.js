@@ -44,6 +44,9 @@ export const getUploadStatus = (date, params = {}) => api.get('/upload-status', 
 });
 
 export const getAdminPracticeProgress = (params = {}) => api.get('/admin/practice-progress', { params });
+export const getAdminPracticeExport = (params = {}) => api.get('/admin/export-practice-progress', { params, responseType: 'blob' });
+
+
 
 
 // Curriculum & Homework

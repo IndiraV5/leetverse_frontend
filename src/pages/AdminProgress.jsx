@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getAdminPracticeProgress } from '../services/api';
-import { Layers, Zap, Calendar, ExternalLink, Activity, X, User, Shield } from 'lucide-react';
+import { getAdminPracticeProgress, getAdminPracticeExport } from '../services/api';
+import { Layers, Zap, Calendar, ExternalLink, Activity, X, User, Shield, Download, FileDown, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const UserProgressModal = ({ user, date, curriculum, onClose }) => {
@@ -133,6 +133,7 @@ const UserProgressModal = ({ user, date, curriculum, onClose }) => {
 const AdminProgress = () => {
     const { isAdmin } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [data, setData] = useState(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
@@ -144,7 +145,6 @@ const AdminProgress = () => {
                 const response = await getAdminPracticeProgress();
                 setData(response.data);
                 if (response.data?.dates?.length > 0) {
-                    // Default to most recent date
                     setSelectedDate(response.data.dates[response.data.dates.length - 1]);
                 }
             } catch (error) {
@@ -155,6 +155,28 @@ const AdminProgress = () => {
         };
         fetchData();
     }, [isAdmin]);
+
+    const handleExport = async (forAll = false) => {
+        setExporting(true);
+        try {
+            const params = forAll ? {} : { date: selectedDate };
+            const response = await getAdminPracticeExport(params);
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = forAll ? `practice_report_full.xlsx` : `practice_report_${selectedDate}.xlsx`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Export failed", error);
+        } finally {
+            setExporting(false);
+        }
+    };
 
     if (!isAdmin) {
         return (
@@ -183,10 +205,21 @@ const AdminProgress = () => {
                     <Shield className="text-accent" size={18} />
                     <span className="text-accent font-mono text-xs font-bold tracking-[0.3em] uppercase">Admin_Clearance: Level 5</span>
                 </div>
-                <h1 className="text-5xl font-display font-bold tracking-tighter mb-4 text-white uppercase">PRACTICE_TRACKER</h1>
-                <p className="text-white/40 font-mono text-sm tracking-tight max-w-2xl">
-                    Monitor daily progress, completed tasks, and extra practice across all participants in the network.
-                </p>
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div>
+                        <h1 className="text-5xl font-display font-bold tracking-tighter mb-4 text-white uppercase">PRACTICE_TRACKER</h1>
+                        <p className="text-white/40 font-mono text-sm tracking-tight max-w-2xl">
+                            Monitor daily progress, completed tasks, and extra practice across all participants in the network.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => handleExport(true)}
+                        disabled={exporting}
+                        className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white/60 font-mono text-xs font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-sm disabled:opacity-50"
+                    >
+                        <FileDown size={16} /> {exporting ? 'GENERATING...' : 'EXPORT_FULL_SESSION'}
+                    </button>
+                </div>
             </div>
 
             {data?.dates?.length === 0 ? (
@@ -198,15 +231,25 @@ const AdminProgress = () => {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 p-4 bg-white/5 border border-white/10 rounded-sm">
                         <div className="flex items-center gap-4">
                             <span className="text-[10px] font-mono text-white/50 uppercase tracking-[0.2em]">Select Snapshot:</span>
-                            <select 
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="bg-black/40 border border-accent/30 text-accent font-mono text-sm px-4 py-2 rounded-sm focus:outline-none focus:border-accent"
-                            >
-                                {data?.dates?.map(d => (
-                                    <option key={d} value={d} className="bg-background text-white">{d}</option>
-                                ))}
-                            </select>
+                            <div className="flex items-center gap-2">
+                                <select 
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="bg-black/40 border border-accent/30 text-accent font-mono text-sm px-4 py-2 rounded-sm focus:outline-none focus:border-accent"
+                                >
+                                    {data?.dates?.map(d => (
+                                        <option key={d} value={d} className="bg-background text-white">{d}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={() => handleExport(false)}
+                                    disabled={exporting}
+                                    title="Export this day"
+                                    className="p-2 bg-accent/10 border border-accent/20 text-accent hover:bg-accent hover:text-background transition-all rounded-sm disabled:opacity-50"
+                                >
+                                    {exporting ? <RefreshCw size={18} className="animate-spin" /> : <Download size={18} />}
+                                </button>
+                            </div>
                         </div>
                         
                         <div className="flex gap-4">
