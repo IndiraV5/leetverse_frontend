@@ -19,6 +19,7 @@ import ValidationModal from './components/ValidationModal';
 import { ReminderProvider, useReminders } from './context/ReminderContext';
 import { verifyAndComplete } from './services/api';
 import { LogIn, LogOut, User as UserIcon, Shield, X } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 import { checkHealth } from './services/api';
 
@@ -253,8 +254,8 @@ function AppContent() {
 
   const handleGlobalVerify = async (responses) => {
     const data = {
-        rollNo: user.rollNo,
-        ...responses
+      rollNo: user.rollNo,
+      ...responses
     };
     const res = await verifyAndComplete(data);
     await refreshReminders();
@@ -312,12 +313,12 @@ function AppContent() {
       </main>
 
       <ReminderBanner />
-      
+
       {showValidation && (
-        <ValidationModal 
-            question={selectedQuestion} 
-            onClose={closeValidation} 
-            onVerify={handleGlobalVerify}
+        <ValidationModal
+          question={selectedQuestion}
+          onClose={closeValidation}
+          onVerify={handleGlobalVerify}
         />
       )}
     </div>
@@ -330,6 +331,7 @@ function App() {
       <AuthProvider>
         <ReminderProvider>
           <AppContent />
+          <Analytics />
         </ReminderProvider>
       </AuthProvider>
     </Router>
