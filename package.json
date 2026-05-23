@@ -16,7 +16,7 @@
     "@vercel/analytics": "^2.0.0",
     "axios": "^1.13.6",
     "clsx": "^2.1.1",
-    "firebase": "^12.10.0",
+    "firebase": "^12.13.0",
     "firebase-admin": "^13.7.0",
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.564.0",

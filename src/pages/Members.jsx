@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import { Users, Crown, Star, Instagram, Linkedin, Github, Loader2, AlertCircle } from 'lucide-react';
+import { Users, Crown, Star, Instagram, Linkedin, Github, Loader2, AlertCircle, GraduationCap, Palette, Megaphone, Film, Code, Briefcase, X } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
+
+const DOMAINS = [
+    { id: 'web-dev', name: 'WEB DEV', icon: Code },
+    { id: 'mentoring', name: 'MENTORING', icon: GraduationCap },
+    { id: 'marketing-pr', name: 'MARKETING & PR', icon: Megaphone },
+    { id: 'design', name: 'DESIGN', icon: Palette },
+    { id: 'video-editing', name: 'VIDEO EDITING', icon: Film }
+];
 
 const MemberCard = ({ person, index }) => {
     const x = useMotionValue(0);
@@ -106,22 +114,63 @@ const MemberCard = ({ person, index }) => {
 };
 
 const Members = () => {
-    const [members, setMembers] = useState({ president: [], 'vice-president': [] });
+    const [members, setMembers] = useState({ 
+        president: [], 
+        'vice-president': [],
+        mentoring: [],
+        design: [],
+        'marketing-pr': [],
+        'video-editing': [],
+        'web-dev': [],
+        administration: []
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedDomain, setSelectedDomain] = useState(null);
 
     useEffect(() => {
         const fetchMembers = async () => {
             try {
                 // console.log("Fetching members from Firestore...");
-                const roles = ['president', 'vice-president'];
-                const fetchedData = {};
+                const roles = [
+                    'president', 
+                    'vice-president', 
+                    'mentoring', 
+                    'design', 
+                    'marketing-pr', 
+                    'marketing-and-pr', 
+                    'video-editing', 
+                    'web-dev', 
+                    'web-development', 
+                    'administration'
+                ];
+                const fetchedData = {
+                    president: [],
+                    'vice-president': [],
+                    mentoring: [],
+                    design: [],
+                    'marketing-pr': [],
+                    'video-editing': [],
+                    'web-dev': [],
+                    administration: []
+                };
 
                 for (const role of roles) {
-                    const personsRef = collection(db, 'members', role, 'persons');
-                    const snapshot = await getDocs(personsRef);
-                    fetchedData[role] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    // console.log(`Fetched ${fetchedData[role].length} persons for ${role}`);
+                    try {
+                        const personsRef = collection(db, 'members', role, 'persons');
+                        const snapshot = await getDocs(personsRef);
+                        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        
+                        if (role === 'marketing-and-pr' || role === 'marketing-pr') {
+                            fetchedData['marketing-pr'] = [...(fetchedData['marketing-pr'] || []), ...data];
+                        } else if (role === 'web-development' || role === 'web-dev') {
+                            fetchedData['web-dev'] = [...(fetchedData['web-dev'] || []), ...data];
+                        } else {
+                            fetchedData[role] = data;
+                        }
+                    } catch (e) {
+                        console.error(`Error fetching ${role}:`, e);
+                    }
                 }
 
                 setMembers(fetchedData);
@@ -239,6 +288,52 @@ const Members = () => {
                     )}
                 </section>
 
+                {/* Domains Section */}
+                <section className="mb-32">
+                    <div className="flex items-center gap-4 mb-12">
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                        <h3 className="flex items-center gap-3 text-accent font-mono text-sm tracking-[0.3em] uppercase">
+                            <Users size={20} className="text-accent" /> Domains
+                        </h3>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                        {DOMAINS.map((domain, i) => {
+                            const Icon = domain.icon;
+                            const count = members[domain.id]?.length || 0;
+                            return (
+                                <motion.div
+                                    key={domain.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: i * 0.05 }}
+                                    whileHover={{ scale: 1.03, translateY: -5 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => setSelectedDomain(domain)}
+                                    className="p-8 bg-black/40 border border-accent/30 rounded-2xl hover:border-accent/80 hover:shadow-[0_0_30px_rgba(0,255,157,0.15)] transition-all cursor-pointer flex flex-col items-center justify-center text-center aspect-[4/3] group relative overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    
+                                    <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center mb-6 group-hover:bg-accent/20 group-hover:border-accent/50 transition-all shadow-[0_0_15px_rgba(0,255,157,0.05)]">
+                                        <Icon className="text-accent group-hover:scale-110 transition-transform" size={28} />
+                                    </div>
+
+                                    <h4 className="text-lg font-display font-black text-white uppercase tracking-wider mb-2">
+                                        {domain.name}
+                                    </h4>
+                                    
+                                    <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full">
+                                        <span className="text-[9px] font-mono font-bold text-accent tracking-widest uppercase">
+                                            {count} {count === 1 ? 'MEMBER' : 'MEMBERS'}
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </section>
+
                 {/* Coming Soon Section */}
                 <motion.section
                     initial={{ opacity: 0 }}
@@ -281,6 +376,65 @@ const Members = () => {
                         </motion.div>
                     </div>
                 </motion.section>
+
+                {/* Domain Members Popup Modal */}
+                <AnimatePresence>
+                    {selectedDomain && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-background/95">
+                            {/* Backdrop Click */}
+                            <div 
+                                className="absolute inset-0 cursor-default" 
+                                onClick={() => setSelectedDomain(null)} 
+                            />
+
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                className="relative w-full max-w-5xl bg-[#0a0a0a]/90 backdrop-blur-md p-8 md:p-12 border border-accent/20 rounded-2xl overflow-y-auto max-h-[85vh] z-10 shadow-[0_0_50px_rgba(0,255,157,0.15)] scrollbar-thin"
+                            >
+                                {/* Close Button */}
+                                <button 
+                                    onClick={() => setSelectedDomain(null)} 
+                                    className="absolute top-6 right-6 text-white/40 hover:text-accent hover:rotate-90 transition-all duration-300 p-2 hover:bg-white/5 rounded-full"
+                                >
+                                    <X size={20} />
+                                </button>
+
+                                {/* Header */}
+                                <div className="flex flex-col items-center text-center mb-12">
+                                    <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center mb-4">
+                                        {React.createElement(selectedDomain.icon, { className: "text-accent", size: 28 })}
+                                    </div>
+                                    <h2 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tight">
+                                        {selectedDomain.name} DOMAIN
+                                    </h2>
+                                    <p className="text-[10px] font-mono text-accent uppercase tracking-widest mt-2 font-bold">
+                                        Active Roster
+                                    </p>
+                                    <div className="h-[1px] w-20 bg-accent/30 mt-4" />
+                                </div>
+
+                                {/* Members list */}
+                                {members[selectedDomain.id]?.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                                        {members[selectedDomain.id].map((person, i) => (
+                                            <MemberCard key={person.id} person={person} index={i} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center p-16 border border-white/5 bg-white/[0.01] rounded-2xl flex flex-col items-center">
+                                        <Users size={40} className="text-white/10 mb-4 animate-pulse" />
+                                        <h4 className="text-white/80 font-display text-lg font-bold mb-1 uppercase tracking-tight">Roster Empty</h4>
+                                        <p className="text-white/40 text-xs font-mono max-w-xs uppercase tracking-wider leading-relaxed">
+                                            No team members assigned to {selectedDomain.name} yet.
+                                        </p>
+                                    </div>
+                                )}
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
 
                 {/* Footer Note */}
                 <div className="mt-40 text-center">
