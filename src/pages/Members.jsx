@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { getMembers } from '../services/api';
 import { Users, Crown, Star, Instagram, Linkedin, Github, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
@@ -59,11 +60,27 @@ const MemberCard = ({ person, index }) => {
                 }}
                 className="w-27 h-27 rounded-full overflow-hidden border-2 border-accent/20 group-hover/card:border-accent transition-all mb-6 relative z-10"
             >
-                <img
-                    src={person.photoUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=placeholder"}
-                    alt={person.name}
-                    className="w-full h-full object-cover transition-all duration-500"
-                />
+                {/* Image with Google Drive direct link handling */}
+                {(() => {
+                    const placeholderUrl = "https://api.dicebear.com/7.x/avataaars/svg?seed=placeholder";
+                    const getDirectImageUrl = (url) => {
+                        if (!url) return "";
+                        const driveRegex = /https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)\/view/;
+                        const match = url.match(driveRegex);
+                        if (match && match[1]) {
+                            return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+                        }
+                        return url;
+                    };
+                    const photoSrc = person.photoUrl ? getDirectImageUrl(person.photoUrl) : placeholderUrl;
+                    return (
+                        <img
+                            src={photoSrc}
+                            alt={person.name}
+                            className="w-full h-full object-cover transition-all duration-500"
+                        />
+                    );
+                })()}
             </motion.div>
 
             <motion.h4
@@ -106,25 +123,33 @@ const MemberCard = ({ person, index }) => {
 };
 
 const Members = () => {
-    const [members, setMembers] = useState({ president: [], 'vice-president': [] });
+    const [members, setMembers] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchMembers = async () => {
             try {
-                // console.log("Fetching members from Firestore...");
-                const roles = ['president', 'vice-president'];
-                const fetchedData = {};
-
-                for (const role of roles) {
-                    const personsRef = collection(db, 'members', role, 'persons');
-                    const snapshot = await getDocs(personsRef);
-                    fetchedData[role] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    // console.log(`Fetched ${fetchedData[role].length} persons for ${role}`);
+                // Fetch members data directly via backend cached endpoint
+                const response = await getMembers();
+                const fetchedData = response.data;
+                
+                if (!fetchedData) {
+                    throw new Error("No data returned from members cache.");
                 }
-
-                setMembers(fetchedData);
+                
+                // Normalize keys (handle 'president' vs 'President', 'vice-president' vs 'Vice President')
+                const normalizedData = {};
+                for (const key in fetchedData) {
+                    const normKey = key.toLowerCase().replace('-', ' ');
+                    normalizedData[normKey] = fetchedData[key] || [];
+                }
+                
+                // Ensure required keys exist
+                if (!normalizedData['president']) normalizedData['president'] = [];
+                if (!normalizedData['vice president']) normalizedData['vice president'] = [];
+                
+                setMembers(normalizedData);
             } catch (err) {
                 console.error("Error fetching members:", err);
                 setError("Unable to sync with database. Please try again later.");
@@ -206,7 +231,7 @@ const Members = () => {
                     {members.president.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                             {members.president.map((person, i) => (
-                                <MemberCard key={person.id} person={person} index={i} />
+                                <MemberCard key={person.id || person.rollNo || i} person={person} index={i} />
                             ))}
                         </div>
                     ) : (
@@ -226,10 +251,10 @@ const Members = () => {
                         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                     </div>
 
-                    {members['vice-president'].length > 0 ? (
+                    {members['vice president'].length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                            {members['vice-president'].map((person, i) => (
-                                <MemberCard key={person.id} person={person} index={i} />
+                            {members['vice president'].map((person, i) => (
+                                <MemberCard key={person.id || person.rollNo || i} person={person} index={i} />
                             ))}
                         </div>
                     ) : (
@@ -239,48 +264,45 @@ const Members = () => {
                     )}
                 </section>
 
-                {/* Coming Soon Section */}
-                <motion.section
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    className="relative mt-20 group"
-                >
-                    <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-transparent to-background z-20" />
 
-                    <div className="relative z-10 opacity-5 blur-sm pointer-events-none grayscale overflow-hidden">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            {[...Array(8)].map((_, i) => (
-                                <div key={i} className="aspect-square bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center p-6">
-                                    <Users size={32} className="text-white/20 mb-4" />
-                                    <div className="h-2 w-full bg-white/10 rounded" />
+                    {/* Dynamic Domain Sections */}
+                    {Object.entries(members).map(([domain, persons]) => {
+                        // Skip president and vice president as they are handled above
+                        if (domain === 'president' || domain === 'vice president' || domain === 'vice-president') return null;
+                        
+                        return (
+                            <section key={domain} className="mb-24">
+                                <div className="flex items-center gap-4 mb-12">
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                    <h3 className="flex items-center gap-3 text-accent font-mono text-sm tracking-[0.3em] uppercase">
+                                        <Users size={20} className="text-accent" /> {domain}
+                                    </h3>
+                                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                                 </div>
-                            ))}
-                        </div>
-                    </div>
 
-
-                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center">
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            whileInView={{ y: 0, opacity: 1 }}
-                            transition={{ duration: 0.8 }}
-                            className="relative"
-                        >
-                            <h2 className="text-5xl sm:text-7xl md:text-9xl font-display font-black tracking-tighter text-white/5 uppercase select-none">
-                                Coming Soon
-                            </h2>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <motion.div
-                                    whileHover={{ scale: 1.05 }}
-                                    className="px-8 py-3 border border-accent/20 bg-background/80 backdrop-blur-md rounded-full shadow-2xl"
-                                >
-                                    <p className="text-accent font-mono text-sm tracking-[0.4em] uppercase font-bold">More roles</p>
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    </div>
-                </motion.section>
+                                {persons.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                                        {persons
+                                            .sort((a, b) => {
+                                                // Sort by position: Leads first, then Ass. Lead, then Members
+                                                const posA = (a.position || '').toLowerCase();
+                                                const posB = (b.position || '').toLowerCase();
+                                                if (posA.includes('lead') && !posB.includes('lead')) return -1;
+                                                if (!posA.includes('lead') && posB.includes('lead')) return 1;
+                                                return 0;
+                                            })
+                                            .map((person, i) => (
+                                            <MemberCard key={person.id || person.rollNo || i} person={person} index={i} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center p-12 border border-white/5 bg-white/[0.02] rounded-3xl">
+                                        <p className="text-white/20 font-mono text-xs uppercase tracking-widest">Roster currently empty</p>
+                                    </div>
+                                )}
+                            </section>
+                        );
+                    })}
 
                 {/* Footer Note */}
                 <div className="mt-40 text-center">
