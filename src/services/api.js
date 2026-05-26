@@ -28,6 +28,7 @@ export const getTop10Leaderboard = (rollNo, params = {}) => api.get('/leaderboar
     params: { rollNo, ...params }
 });
 export const getDirectTop10 = (key = 'latest_top10_url') => api.get(`/leaderboard/cached/${key}`);
+export const getMembers = () => api.get('/leaderboard/cached/latest_members_url');
 export const getCachedTop10 = () => api.get('/leaderboard/cached/top10');
 export const getPreviousWinners = () => api.get('/leaderboard/previous');
 export const getDailyLeaderboard = (date) => api.get(`/leaderboard/${date}`);
